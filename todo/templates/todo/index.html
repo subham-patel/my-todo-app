@@ -1,0 +1,116 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>ToDo App</title>
+		<link href="https://fonts.googleapis.com/css?family=Oswald" rel="stylesheet">
+		<link id="theme-css" rel="stylesheet" href="{% static 'todo/bs/css/flatly.min.css' %}" />
+		<link rel="stylesheet" href="{% static 'todo/styles.css' %}" />
+	</head>
+	<body>
+		<div class="container-fluid" id="wrapper">
+			<div class="row">
+				<div class="col-xs-12" id="content">
+					<h2>What do you want to do today?</h2>
+
+					<form action="{% url 'add' %}" method="POST" role="form">
+						{% csrf_token %}
+						<div class="form-group">
+							<div class="input-group">
+							  {{ form.text }}
+							  <button type="submit" class="btn btn-default" id="add-btn">ADD</button>
+							</div>
+						</div>
+					</form>
+
+					<div class="btn-toolbar">
+						<div class="btn-group">
+							<a href="{% url 'deletecomplete' %}"><button type="button" class="btn btn-warning">DELETE SELECTED ITEM</button></a>
+						</div>
+						<div class="btn-group">
+							<a href="{% url 'deleteall' %}"><button type="button" class="btn btn-danger-custom">DELETE ALL</button></a>
+						</div>
+					</div>
+
+					<ul class="list-group t20">
+						{% for todo in todo_list %}
+							<li class="list-group-item" data-todo-id="{{ todo.id }}" data-edit-url="{% url 'edit' todo.id %}"{% if not todo.complete %} data-link-href="{% url 'complete' todo.id %}"{% endif %}>
+								<form action="{% if todo.complete %}{% url 'uncomplete' todo.id %}{% else %}{% url 'complete' todo.id %}{% endif %}" method="POST" class="check-form">
+									{% csrf_token %}
+									<button type="submit" class="check-btn {% if todo.complete %}checked{% endif %}">
+										{% if todo.complete %}&#10003;{% endif %}
+									</button>
+								</form>
+								<div class="todo-content">
+									{% if todo.complete %}
+										<span class="todo-text completed">{{ todo.text }}</span>
+									{% else %}
+										<a href="{% url 'complete' todo.id %}" class="todo-link"><span class="todo-text">{{ todo.text }}</span></a>
+									{% endif %}
+
+								</div>
+								<div class="todo-actions">
+									{% if not todo.complete %}
+										<button class="action-edit">EDIT</button>
+									{% else %}
+										<a href="{% url 'delete' todo.id %}"><button class="action-delete">DEL</button></a>
+									{% endif %}
+								</div>
+							</li>
+						{% endfor %}
+					</ul>
+				</div>
+			</div>
+			<footer>
+				<div class="row pad">
+					<div class="col-lg-12 text-center">
+						<strong>Dynamic Todolist</strong>
+					</div>
+				</div>
+			</footer>
+		</div>
+		<script src="{% static 'todo/theme.js' %}"></script>
+		<script>
+			document.querySelector('.list-group').addEventListener('click', function(e) {
+				var editBtn = e.target.closest('.action-edit');
+				if (!editBtn) return;
+
+				var item = editBtn.closest('.list-group-item');
+				var content = item.querySelector('.todo-content');
+				var textSpan = content.querySelector('.todo-text');
+				var actions = item.querySelector('.todo-actions');
+				var currentText = textSpan.textContent.trim();
+				var editUrl = item.dataset.editUrl;
+				var isCompleted = textSpan.classList.contains('completed');
+				var linkHref = item.dataset.linkHref || '';
+
+				if (item.classList.contains('editing')) return;
+				item.classList.add('editing');
+
+				var csrf = '{{ csrf_token }}';
+
+				content.innerHTML =
+					'<form action="' + editUrl + '" method="POST" class="edit-form">' +
+						'<input type="hidden" name="csrfmiddlewaretoken" value="' + csrf + '">' +
+						'<input type="text" name="text" value="' + currentText.replace(/"/g, '&quot;') + '" maxlength="40" autofocus>' +
+						'<button type="submit" class="action-save">SAVE</button>' +
+						'<button type="button" class="action-cancel">CANCEL</button>' +
+					'</form>';
+				actions.style.display = 'none';
+
+				content.querySelector('.action-cancel').addEventListener('click', function() {
+					item.classList.remove('editing');
+					if (linkHref) {
+						content.innerHTML = '<a href="' + linkHref + '" class="todo-link"><span class="todo-text">' + currentText + '</span></a>';
+					} else {
+						content.innerHTML = '<span class="todo-text completed">' + currentText + '</span>';
+					}
+					actions.style.display = '';
+				});
+			});
+		</script>
+	</body>
+</html>
